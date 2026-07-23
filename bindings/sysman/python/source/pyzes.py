@@ -86,6 +86,7 @@ def _LoadZeLibrary():
 
             library_loaded = False
             load_errors = []
+            last_error = None
             for path in possible_paths:
                 try:
                     gpuLib = CDLL(path)
@@ -93,12 +94,17 @@ def _LoadZeLibrary():
                     break
                 except OSError as error:
                     load_errors.append(f"{path}: {error}")
+                    last_error = error
 
             if not library_loaded:
-                raise Exception(
+                # Raise OSError (the type ctypes.CDLL itself raises on a failed
+                # dlopen) so callers that handle OSError specifically keep
+                # working, while still surfacing the aggregated per-path
+                # diagnostics.
+                raise OSError(
                     "Failed to load Level Zero loader on Linux. "
                     f"Tried paths: {possible_paths}. Errors: {load_errors}"
-                )
+                ) from last_error
         else:
             libName = libName + ".dll"
 
